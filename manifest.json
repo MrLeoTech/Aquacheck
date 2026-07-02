@@ -1,0 +1,28 @@
+{
+  "name": "AquaCheck - Qualidade da Água - Parque Aquático de Amarante",
+  "short_name": "AquaCheck Água",
+  "description": "Controlo da Qualidade da Água do Parque Aquático de Amarante",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#0ea5e9",
+  "theme_color": "#0ea5e9",
+  "orientation": "portrait-primary",
+  "scope": "./",
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["productivity", "utilities"],
+  "lang": "pt-PT",
+  "dir": "ltr"
+}

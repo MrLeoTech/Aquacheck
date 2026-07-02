@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0ea5e9">
+  <meta name="description" content="AquaCheck - Controlo da Qualidade da Água - Parque Aquático de Amarante">
+  <title>AquaCheck - Qualidade da Água</title>
+
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="icon" type="image/png" href="favicon.png">
+
+  <script src="xlsx.full.min.js"></script>
+  <script src="jspdf.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- LOGIN -->
+  <div id="login-screen" class="screen active">
+    <div class="login-card">
+      <div class="logo-container">
+        <div class="logo-icon">🌊</div>
+        <h1>AquaCheck</h1>
+        <p class="subtitle">Parque Aquático de Amarante</p>
+        <p class="tagline">Controlo da Qualidade da Água</p>
+      </div>
+      <div class="login-form">
+        <label for="employee-name">Nome do Funcionário</label>
+        <input type="text" id="employee-name" placeholder="Ex: João Silva" autocomplete="name" maxlength="60">
+        <div id="pin-field-wrap" class="pin-field-wrap" style="display:none">
+          <label for="employee-pin">PIN de Acesso</label>
+          <input type="password" id="employee-pin" placeholder="4 dígitos" inputmode="numeric" maxlength="8" autocomplete="off">
+        </div>
+        <button id="btn-login" class="btn-primary" type="button">
+          <span>Entrar</span>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN APP -->
+  <div id="app-screen" class="screen">
+    <header class="app-header">
+      <div class="header-brand">
+        <div class="header-logo">🌊</div>
+        <div class="header-text">
+          <h2>AquaCheck</h2>
+          <span class="header-sub">Parque Aquático de Amarante</span>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button id="btn-search" class="icon-btn" title="Pesquisar" aria-label="Pesquisar">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        </button>
+        <button id="btn-settings" class="icon-btn" title="Definições" aria-label="Definições">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9c.7 0 1.35.25 1.85.66H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <section class="date-bar">
+      <button id="btn-prev-date" class="icon-btn" aria-label="Dia anterior">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+      </button>
+      <div class="date-display">
+        <input type="date" id="current-date" value="">
+        <span id="current-date-label">—</span>
+      </div>
+      <button id="btn-next-date" class="icon-btn" aria-label="Dia seguinte">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+      </button>
+    </section>
+
+    <section class="dashboard" id="dashboard-section">
+      <div class="progress-section">
+        <div class="progress-header">
+          <span>Progresso do Dia</span>
+          <span id="progress-text">0/0 leituras</span>
+        </div>
+        <div class="progress-bar"><div id="progress-fill" class="progress-fill"></div></div>
+      </div>
+      <div class="dash-cards">
+        <div class="dash-card">
+          <span class="dash-number" id="dash-pools-checked">0</span>
+          <span class="dash-label">Piscinas Verificadas</span>
+        </div>
+        <div class="dash-card">
+          <span class="dash-number" id="dash-readings">0</span>
+          <span class="dash-label">Leituras Hoje</span>
+        </div>
+        <div class="dash-card alert">
+          <span class="dash-number" id="dash-alerts">0</span>
+          <span class="dash-label">Alertas Ativos</span>
+        </div>
+        <div class="dash-card">
+          <span class="dash-number" id="dash-ph-avg">—</span>
+          <span class="dash-label">Média pH</span>
+        </div>
+        <div class="dash-card">
+          <span class="dash-number" id="dash-cl-avg">—</span>
+          <span class="dash-label">Média Cloro Livre</span>
+        </div>
+        <div class="dash-card">
+          <span class="dash-number" id="dash-temp-avg">—</span>
+          <span class="dash-label">Temp. Média</span>
+        </div>
+      </div>
+      <div class="pending-section">
+        <h4 class="pending-title">Leituras Pendentes</h4>
+        <div id="pending-list" class="pending-list"></div>
+      </div>
+      <div class="pool-legend">
+        <span class="legend-item"><span class="pool-time-dot filled"></span> Completo</span>
+        <span class="legend-item"><span class="pool-time-dot alert"></span> Com alertas</span>
+        <span class="legend-item"><span class="pool-time-dot"></span> Pendente</span>
+      </div>
+      <div class="last-update" id="last-update">Última atualização: —</div>
+    </section>
+
+    <section class="pools-section" id="pools-section">
+      <h3 class="section-title">Selecionar Piscina</h3>
+      <div class="pools-grid" id="pools-grid"></div>
+    </section>
+
+    <section class="bottom-actions">
+      <button id="btn-history" class="btn-secondary">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><path d="M12 7v5l4 2"/></svg>
+        Histórico
+      </button>
+      <button id="btn-charts" class="btn-secondary">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 16l4-8 4 4 5-9"/></svg>
+        Gráficos
+      </button>
+      <button id="btn-export-daily-pdf" class="btn-secondary">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        PDF Dia
+      </button>
+      <button id="btn-export-excel" class="btn-secondary">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        Excel
+      </button>
+      <button id="btn-export-json" class="btn-secondary">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        JSON
+      </button>
+      <button id="btn-import-json" class="btn-secondary">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        Importar
+      </button>
+    </section>
+
+    <footer class="app-footer">
+      <span id="footer-user">—</span>
+      <span id="footer-date">—</span>
+    </footer>
+  </div>
+
+  <!-- RECORD SCREEN -->
+  <div id="record-screen" class="screen">
+    <div class="record-header">
+      <button id="btn-back-pools" class="icon-btn back-btn" aria-label="Voltar">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+      </button>
+      <div class="record-info">
+        <h3 id="record-pool-title">Piscina</h3>
+        <div class="record-meta">
+          <span id="record-date">—</span>
+          <span id="record-time" class="time-badge">—</span>
+          <span id="record-status" class="status-badge pending">Em curso</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="record-body">
+      <div class="time-selector">
+        <label for="record-time-select">Hora da Leitura:</label>
+        <select id="record-time-select"></select>
+      </div>
+
+      <p id="comparison-hint" class="comparison-hint" aria-live="polite"></p>
+
+      <div class="ocr-section">
+        <button id="btn-ocr-doseadora" class="btn-secondary btn-full">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+          📷 Ler Doseadora (OCR)
+        </button>
+        <p class="ocr-hint">Tire foto ao visor da doseadora para preencher automaticamente (Tesseract.js)</p>
+      </div>
+
+      <div class="params-form" id="params-form"></div>
+
+      <div class="obs-section">
+        <label for="record-observations">Observações</label>
+        <textarea id="record-observations" rows="3" placeholder="Registar observações relevantes..."></textarea>
+      </div>
+
+      <div class="photo-section-container">
+        <h4>📷 Fotografias da Piscina</h4>
+        <div class="photo-section" id="pool-photos"></div>
+        <button class="btn-photo" id="btn-add-pool-photo" type="button" aria-label="Fotografar piscina">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+          <span>Fotografar</span>
+        </button>
+      </div>
+
+      <div class="signature-section">
+        <h4>✍️ Assinatura do Responsável</h4>
+        <div class="signature-wrapper">
+          <canvas id="signature-canvas" width="600" height="180"></canvas>
+          <div class="signature-hint">Desenhe a assinatura aqui</div>
+        </div>
+        <div class="signature-actions">
+          <button id="btn-clear-sig" class="btn-outline" type="button">Limpar</button>
+          <button id="btn-save-sig" class="btn-primary" type="button">Guardar Assinatura</button>
+        </div>
+      </div>
+
+      <div class="record-actions">
+        <button id="btn-save-record" class="btn-primary btn-large" type="button">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+          Guardar Registo
+        </button>
+        <button id="btn-export-pdf" class="btn-secondary btn-large" type="button">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          Exportar PDF
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- HISTORY -->
+  <div id="history-screen" class="screen">
+    <div class="screen-header">
+      <button id="btn-back-history" class="icon-btn back-btn" aria-label="Voltar">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+      </button>
+      <h3>Histórico de Registos</h3>
+    </div>
+    <div class="history-filters">
+      <input type="text" id="history-search" placeholder="Pesquisar...">
+      <div class="filter-row">
+        <select id="history-filter-pool"><option value="">Todas as piscinas</option></select>
+        <input type="date" id="history-filter-from" title="Data início">
+        <input type="date" id="history-filter-to" title="Data fim">
+      </div>
+      <label class="checkbox-inline filter-alerts">
+        <input type="checkbox" id="history-filter-alerts"> Apenas com alertas
+      </label>
+    </div>
+    <div class="history-list" id="history-list"></div>
+  </div>
+
+  <!-- SEARCH -->
+  <div id="search-screen" class="screen">
+    <div class="screen-header">
+      <button id="btn-back-search" class="icon-btn back-btn" aria-label="Voltar">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+      </button>
+      <h3>Pesquisa Global</h3>
+    </div>
+    <div class="search-body">
+      <input type="text" id="global-search" placeholder="Pesquisar registos...">
+      <div class="search-results" id="search-results"></div>
+    </div>
+  </div>
+
+  <!-- CHARTS -->
+  <div id="charts-screen" class="screen">
+    <div class="screen-header">
+      <button id="btn-back-charts" class="icon-btn back-btn" aria-label="Voltar">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+      </button>
+      <h3>Gráficos de Tendência</h3>
+    </div>
+    <div class="charts-body">
+      <label for="chart-pool-select">Piscina:</label>
+      <select id="chart-pool-select"></select>
+      <h4 id="charts-pool-title"></h4>
+      <div id="chart-container" class="chart-container"></div>
+    </div>
+  </div>
+
+  <!-- SETTINGS -->
+  <div id="settings-screen" class="screen">
+    <div class="screen-header">
+      <button id="btn-back-settings" class="icon-btn back-btn" aria-label="Voltar">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+      </button>
+      <h3>Definições</h3>
+    </div>
+    <div class="settings-body">
+      <div class="settings-group">
+        <h4>🎨 Aparência</h4>
+        <div class="setting-row">
+          <span>Tema Escuro</span>
+          <label class="toggle-switch">
+            <input type="checkbox" id="theme-toggle">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <div class="settings-group">
+        <h4>🔐 Segurança</h4>
+        <div class="setting-input-row">
+          <label for="setting-pin">PIN de Acesso (opcional)</label>
+          <input type="password" id="setting-pin" placeholder="Ex: 1234" maxlength="8" inputmode="numeric">
+        </div>
+        <div class="setting-row">
+          <span>Exigir Assinatura</span>
+          <label class="toggle-switch">
+            <input type="checkbox" id="setting-require-sig" checked>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <div class="settings-group">
+        <h4>📋 Campos Obrigatórios</h4>
+        <div id="required-fields-list" class="required-fields-list"></div>
+      </div>
+
+      <div class="settings-group">
+        <h4>🔔 Notificações</h4>
+        <div class="setting-row">
+          <span>Lembretes de Leitura</span>
+          <label class="toggle-switch">
+            <input type="checkbox" id="setting-notifications" checked>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <button id="btn-request-notifications" class="btn-outline btn-full" type="button">Ativar Notificações no Dispositivo</button>
+      </div>
+
+      <div class="settings-group">
+        <h4>⚗️ Limites de pH</h4>
+        <div class="setting-input-row">
+          <label>Mínimo pH</label>
+          <input type="number" id="setting-ph-min" step="0.01" value="7.20">
+        </div>
+        <div class="setting-input-row">
+          <label>Máximo pH</label>
+          <input type="number" id="setting-ph-max" step="0.01" value="7.80">
+        </div>
+      </div>
+
+      <div class="settings-group">
+        <h4>🧪 Limites de Cloro Livre (mg/L)</h4>
+        <div class="setting-input-row">
+          <label>Mínimo</label>
+          <input type="number" id="setting-cl-min" step="0.01" value="0.50">
+        </div>
+        <div class="setting-input-row">
+          <label>Máximo</label>
+          <input type="number" id="setting-cl-max" step="0.01" value="2.50">
+        </div>
+      </div>
+
+      <div class="settings-group">
+        <h4>⚠️ Limite Cloro Combinado (mg/L)</h4>
+        <div class="setting-input-row">
+          <label>Máximo</label>
+          <input type="number" id="setting-cc-max" step="0.01" value="0.60">
+        </div>
+      </div>
+
+      <div class="settings-group">
+        <h4>🏊 Piscinas</h4>
+        <div class="setting-textarea-row">
+          <label>Lista de Piscinas (uma por linha)</label>
+          <textarea id="setting-pools" rows="8"></textarea>
+        </div>
+      </div>
+
+      <div class="settings-group">
+        <h4>⏰ Horários das Leituras</h4>
+        <div class="setting-textarea-row">
+          <label>Horários (HH:MM, um por linha)</label>
+          <textarea id="setting-times" rows="4" placeholder="08:00&#10;13:00&#10;17:00"></textarea>
+        </div>
+      </div>
+
+      <div class="settings-group">
+        <h4>👤 Informação</h4>
+        <div class="setting-row"><span>Funcionário</span><span id="settings-user">—</span></div>
+        <div class="setting-row"><span>Total de Registos</span><span id="settings-records">0</span></div>
+        <div class="setting-row"><span>Alertas Hoje</span><span id="settings-alerts">0</span></div>
+        <div class="setting-row"><span>Versão</span><span>3.1.0</span></div>
+      </div>
+
+      <button id="btn-save-settings" class="btn-primary btn-full" type="button">Guardar Definições</button>
+      <button id="btn-reset-settings" class="btn-outline btn-full" type="button">Repor Definições Padrão</button>
+      <button id="btn-export-all-excel" class="btn-secondary btn-full" type="button">Exportar Tudo para Excel</button>
+      <button id="btn-logout" class="btn-danger btn-full" type="button">Terminar Sessão</button>
+    </div>
+  </div>
+
+  <input type="file" id="photo-input" accept="image/*" capture="environment" hidden>
+  <input type="file" id="import-input" accept=".json" hidden>
+
+  <script src="js/config.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/ocr.js"></script>
+  <script src="js/export.js"></script>
+  <script src="js/charts.js"></script>
+  <script src="js/notifications.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
