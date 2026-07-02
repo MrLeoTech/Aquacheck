@@ -180,12 +180,12 @@ const AquaApp = (() => {
 
   // ─── RECORD ───
 
-  async function openPool(poolId) {
+  async function openPool(poolId, timeSlot = null) {
     currentPoolId = poolId;
     const pool = config.pools.find(p => p.id === poolId);
     if (!pool) return;
 
-    currentTime = config.times[0];
+    currentTime = timeSlot && config.times.includes(timeSlot) ? timeSlot : config.times[0];
     await loadOrCreateRecord();
 
     $('#record-pool-title').textContent = pool.name;
@@ -722,10 +722,38 @@ const AquaApp = (() => {
     const completed = records.filter(r => r.completed);
     const alerts = completed.filter(r => r.hasAlerts);
     const expected = config.pools.length * config.times.length;
+    const pct = expected ? Math.round((completed.length / expected) * 100) : 0;
+
+    const welcome = $('#welcome-user');
+    if (welcome) welcome.textContent = currentUser?.name ? `Olá, ${currentUser.name.split(' ')[0]}!` : 'Olá!';
+
+    const statusEl = $('#dashboard-status');
+    if (statusEl) {
+      statusEl.className = 'dashboard-status';
+      if (pct === 100 && alerts.length === 0) {
+        statusEl.textContent = '✓ Dia completo — todas as leituras registadas!';
+        statusEl.classList.add('status-complete');
+      } else if (pct === 100 && alerts.length > 0) {
+        statusEl.textContent = `Dia completo com ${alerts.length} alerta(s) a rever.`;
+        statusEl.classList.add('status-alert');
+      } else if (completed.length === 0) {
+        statusEl.textContent = `${expected} leituras planeadas — comece por selecionar uma piscina.`;
+      } else {
+        statusEl.textContent = `${expected - completed.length} leitura(s) em falta — continue o registo.`;
+      }
+    }
+
+    const ring = $('#progress-ring');
+    const ringPct = $('#progress-pct');
+    if (ring) ring.style.setProperty('--pct', pct);
+    if (ringPct) ringPct.textContent = pct + '%';
 
     $('#dash-pools-checked').textContent = new Set(completed.map(r => r.poolId)).size;
     $('#dash-readings').textContent = completed.length;
     $('#dash-alerts').textContent = alerts.length;
+
+    const alertsCard = $('#dash-alerts-card');
+    if (alertsCard) alertsCard.classList.toggle('alert', alerts.length > 0);
 
     const phValues = completed.map(r => parseFloat(r.params.ph)).filter(v => !isNaN(v));
     const clValues = completed.map(r => parseFloat(r.params.cloro_livre)).filter(v => !isNaN(v));
@@ -735,7 +763,6 @@ const AquaApp = (() => {
     $('#dash-cl-avg').textContent = clValues.length ? (clValues.reduce((a, b) => a + b, 0) / clValues.length).toFixed(2) : '—';
     $('#dash-temp-avg').textContent = tempValues.length ? (tempValues.reduce((a, b) => a + b, 0) / tempValues.length).toFixed(1) : '—';
 
-    const pct = expected ? Math.round((completed.length / expected) * 100) : 0;
     $('#progress-fill').style.width = pct + '%';
     $('#progress-text').textContent = `${completed.length}/${expected} leituras (${pct}%)`;
 
@@ -743,7 +770,7 @@ const AquaApp = (() => {
     config.times.forEach(t => {
       config.pools.forEach(pool => {
         const done = completed.find(r => r.poolId === pool.id && r.time === t);
-        if (!done) pending.push({ pool: pool.name, time: t });
+        if (!done) pending.push({ poolId: pool.id, pool: pool.name, time: t });
       });
     });
 
@@ -752,9 +779,13 @@ const AquaApp = (() => {
       if (pending.length === 0) {
         pendingEl.innerHTML = '<p class="pending-empty">✓ Todas as leituras do dia estão completas!</p>';
       } else {
-        pendingEl.innerHTML = pending.slice(0, 8).map(p =>
-          `<span class="pending-chip">${p.pool} (${p.time})</span>`
-        ).join('') + (pending.length > 8 ? `<span class="pending-chip">+${pending.length - 8} mais</span>` : '');
+        pendingEl.innerHTML = pending.slice(0, 10).map(p =>
+          `<button type="button" class="pending-chip" data-pool="${p.poolId}" data-time="${p.time}">${p.pool} (${p.time})</button>`
+        ).join('') + (pending.length > 10 ? `<span class="pending-chip">+${pending.length - 10} mais</span>` : '');
+
+        $$('#pending-list .pending-chip[data-pool]').forEach(btn => {
+          btn.onclick = () => openPool(btn.dataset.pool, btn.dataset.time);
+        });
       }
     }
 
@@ -990,10 +1021,28 @@ const AquaApp = (() => {
 
   // ─── EVENTS ───
 
+  function goToToday() {
+    currentDateISO = formatDateISO(new Date());
+    $('#current-date').value = currentDateISO;
+    updateDateLabel();
+    renderPools();
+    updateDashboard();
+  }
+
   function setupAppEvents() {
     $('#btn-prev-date').onclick = () => changeDate(-1);
     $('#btn-next-date').onclick = () => changeDate(1);
+    $('#btn-today').onclick = goToToday;
     $('#current-date').onchange = setDateFromInput;
+
+    $('#btn-quick-pdf').onclick = () => AquaExport.exportDailyPDF(currentDateISO, allRecords, config);
+    $('#btn-quick-excel').onclick = () => AquaExport.exportExcel(allRecords, config, { dateISO: currentDateISO });
+    $('#btn-quick-charts').onclick = () => openCharts();
+    $('#btn-quick-history').onclick = () => {
+      populateHistoryFilters();
+      renderHistory(getHistoryFilters());
+      showScreen(screens, 'history');
+    };
 
     $('#photo-input').onchange = (e) => {
       if (photoTarget === 'ocr') handleOCRPhoto(e);

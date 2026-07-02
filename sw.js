@@ -1,7 +1,7 @@
 /**
  * AquaCheck v3.1 Service Worker
  */
-const CACHE_NAME = 'aquacheck-water-v3.1';
+const CACHE_NAME = 'aquacheck-water-v3.1.1';
 const STATIC_ASSETS = [
   './',
   './index.html',
@@ -19,7 +19,8 @@ const STATIC_ASSETS = [
   './js/notifications.js',
   './js/app.js',
   './icons/icon-192.png',
-  './icons/icon-512.png'
+  './icons/icon-512.png',
+  './images/logo.png'
 ];
 
 const CDN_ASSETS = [

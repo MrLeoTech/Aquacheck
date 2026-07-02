@@ -31,7 +31,16 @@ Ondas, Adultos, Infantil, Aquaspray, Mini Compact Slide, Chapinheiro, Aquatube, 
 
 3 registos por piscina (configurável): **08:00**, **13:00**, **17:00**
 
-## Deploy no Netlify
+## Desenvolvimento local
+
+```bash
+npm install
+npm run dev
+```
+
+Abre **http://localhost:5180** (porta dedicada ao AquaCheck).
+
+> **Nota:** Se vires "LeoStaff" no browser, estás no projeto errado ou na porta **5173** (outra app). Usa sempre **5180** para o AquaCheck.
 
 1. Comprima a pasta em ZIP
 2. [netlify.com](https://www.netlify.com) → **Deploy manually**

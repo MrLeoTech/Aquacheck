@@ -1,0 +1,15 @@
+{
+  "name": "aquacheck",
+  "version": "3.1.0",
+  "private": true,
+  "description": "AquaCheck - Controlo da Qualidade da Água - Parque Aquático de Amarante",
+  "scripts": {
+    "dev": "vite",
+    "start": "vite",
+    "preview": "vite preview",
+    "build": "vite build"
+  },
+  "devDependencies": {
+    "vite": "^6.3.5"
+  }
+}
