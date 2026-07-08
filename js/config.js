@@ -50,8 +50,6 @@ const DEFAULT_CONFIG = {
   ccMax: 0.60,
   pools: DEFAULT_POOLS,
   times: DEFAULT_TIMES,
-  requiredFields: ['ph', 'cloro_livre', 'cloro_total'],
-  requireSignature: true,
   pin: '',
   enableNotifications: true,
   autoBackupDays: 7

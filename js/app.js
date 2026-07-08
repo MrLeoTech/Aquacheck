@@ -47,6 +47,9 @@ const AquaApp = (() => {
   async function init() {
     await AquaStorage.init();
     config = await AquaStorage.getConfig();
+    delete config.requiredFields;
+    delete config.requireSignature;
+    await AquaStorage.saveConfig(config);
     await refreshRecords();
     initTheme();
     setupInstallPrompt();
@@ -314,7 +317,7 @@ const AquaApp = (() => {
       return `
         <div class="param-row ${alertCls}" data-key="${p.key}">
           <div class="param-header">
-            <span class="param-label">${p.label}${config.requiredFields.includes(p.key) ? ' *' : ''}</span>
+            <span class="param-label">${p.label}</span>
             <span class="param-limits">${limits.min} – ${limits.max} ${p.unit}</span>
           </div>
           <div class="param-input-wrap">
@@ -440,50 +443,6 @@ const AquaApp = (() => {
     const range = limits.max - limits.min;
     if (range > 0 && (num - limits.min < range * 0.15 || limits.max - num < range * 0.15)) return '⚡ Próximo do limite';
     return '';
-  }
-
-  function canvasHasSignature() {
-    if (currentRecord.signature) return true;
-    if (!sigCanvas) return false;
-    const pixels = sigCanvas.getContext('2d').getImageData(0, 0, sigCanvas.width, sigCanvas.height).data;
-    for (let i = 3; i < pixels.length; i += 16) {
-      if (pixels[i] > 0) return true;
-    }
-    return false;
-  }
-
-  function validateBeforeSave() {
-    const missing = config.requiredFields.filter(key => {
-      const p = PARAMETERS.find(x => x.key === key);
-      if (!p) return false;
-      const val = currentRecord.params[key];
-      return val === '' || val == null;
-    });
-
-    if (missing.length) {
-      const labels = missing.map(k => PARAMETERS.find(p => p.key === k)?.label).join(', ');
-      showToast(`Campos obrigatórios em falta: ${labels}`, 'error');
-      return false;
-    }
-
-    if (config.requireSignature) {
-      if (!canvasHasSignature()) {
-        showToast('Assinatura do responsável é obrigatória.', 'error');
-        return false;
-      }
-      if (!currentRecord.signature && sigCanvas) {
-        currentRecord.signature = sigCanvas.toDataURL('image/png');
-      }
-    }
-
-    const livre = parseFloat(currentRecord.params.cloro_livre);
-    const total = parseFloat(currentRecord.params.cloro_total);
-    if (!isNaN(livre) && !isNaN(total) && livre > total) {
-      showToast('Cloro livre não pode ser superior ao cloro total.', 'error');
-      return false;
-    }
-
-    return true;
   }
 
   function computeHasAlerts() {
@@ -932,17 +891,7 @@ const AquaApp = (() => {
     $('#setting-pools').value = config.pools.map(p => p.name).join('\n');
     $('#setting-times').value = config.times.join('\n');
     $('#setting-pin').value = config.pin || '';
-    $('#setting-require-sig').checked = config.requireSignature;
     $('#setting-notifications').checked = config.enableNotifications;
-
-    const reqContainer = $('#required-fields-list');
-    if (reqContainer) {
-      reqContainer.innerHTML = PARAMETERS.filter(p => p.type === 'number' && !p.readonly).map(p => `
-        <label class="checkbox-inline">
-          <input type="checkbox" data-field="${p.key}" ${config.requiredFields.includes(p.key) ? 'checked' : ''}>
-          ${p.label}
-        </label>`).join('');
-    }
   }
 
   async function saveSettings() {
@@ -952,14 +901,7 @@ const AquaApp = (() => {
     config.clMax = parseFloat($('#setting-cl-max').value) || 2.50;
     config.ccMax = parseFloat($('#setting-cc-max').value) || 0.60;
     config.pin = $('#setting-pin').value.trim();
-    config.requireSignature = $('#setting-require-sig').checked;
     config.enableNotifications = $('#setting-notifications').checked;
-
-    config.requiredFields = [];
-    $$('#required-fields-list input:checked').forEach(cb => {
-      config.requiredFields.push(cb.dataset.field);
-    });
-    if (config.requiredFields.length === 0) config.requiredFields = ['ph', 'cloro_livre'];
 
     const poolNames = $('#setting-pools').value.split('\n').map(n => n.trim()).filter(Boolean);
     const existingPools = config.pools;
@@ -1063,9 +1005,6 @@ const AquaApp = (() => {
     $('#btn-save-sig').onclick = saveSignature;
 
     $('#btn-save-record').onclick = async () => {
-      if (!validateBeforeSave()) return;
-      const hasAlerts = computeHasAlerts();
-      if (hasAlerts && !confirm('Este registo contém alertas. Deseja guardar mesmo assim?')) return;
       await saveCurrentRecord(true);
       showScreen(screens, 'app');
       updateDashboard();

@@ -39,6 +39,7 @@
         </button>
       </div>
     </div>
+    <p class="powered-by-login">Powered by <a href="https://mrleotech.netlify.app/" target="_blank" rel="noopener noreferrer">LeoTech</a></p>
   </div>
 
   <!-- MAIN APP -->
@@ -350,18 +351,6 @@
           <label for="setting-pin">PIN de Acesso (opcional)</label>
           <input type="password" id="setting-pin" placeholder="Ex: 1234" maxlength="8" inputmode="numeric">
         </div>
-        <div class="setting-row">
-          <span>Exigir Assinatura</span>
-          <label class="toggle-switch">
-            <input type="checkbox" id="setting-require-sig" checked>
-            <span class="toggle-slider"></span>
-          </label>
-        </div>
-      </div>
-
-      <div class="settings-group">
-        <h4>📋 Campos Obrigatórios</h4>
-        <div id="required-fields-list" class="required-fields-list"></div>
       </div>
 
       <div class="settings-group">
@@ -441,6 +430,11 @@
 
   <input type="file" id="photo-input" accept="image/*" capture="environment" hidden>
   <input type="file" id="import-input" accept=".json" hidden>
+
+  <footer class="powered-by-global" aria-label="Desenvolvido por LeoTech">
+    <span>Powered by</span>
+    <a href="https://mrleotech.netlify.app/" target="_blank" rel="noopener noreferrer">LeoTech</a>
+  </footer>
 
   <script src="js/config.js"></script>
   <script src="js/utils.js"></script>

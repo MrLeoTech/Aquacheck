@@ -46,7 +46,7 @@ body {
   -webkit-font-smoothing: antialiased; overflow-x: hidden;
 }
 
-.screen { display: none; min-height: 100vh; min-height: 100dvh; animation: fadeIn 0.3s ease; }
+.screen { display: none; min-height: 100vh; min-height: 100dvh; animation: fadeIn 0.3s ease; padding-bottom: 36px; }
 .screen.active { display: flex; flex-direction: column; }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 
@@ -54,8 +54,9 @@ body {
    LOGIN
    ============================================ */
 #login-screen {
-  justify-content: center; align-items: center; padding: 24px;
+  justify-content: center; align-items: center; padding: 24px 24px 48px;
   background: linear-gradient(160deg, #0369a1 0%, #0ea5e9 45%, #7dd3fc 100%);
+  position: relative;
 }
 .login-card {
   background: var(--surface); border-radius: var(--radius); padding: 36px 28px;
@@ -328,6 +329,36 @@ body {
   font-size: 0.75rem; color: var(--text-secondary); border-top: 1px solid var(--border);
 }
 
+/* Powered by LeoTech */
+.powered-by-global,
+.powered-by-login {
+  display: flex; align-items: center; justify-content: center; gap: 5px;
+  font-size: 0.7rem; color: var(--text-muted);
+}
+.powered-by-global {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 90;
+  padding: 8px 16px;
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  backdrop-filter: blur(8px);
+  border-top: 1px solid var(--border);
+}
+.powered-by-global a,
+.powered-by-login a {
+  color: var(--primary); font-weight: 700; text-decoration: none;
+  letter-spacing: 0.02em;
+}
+.powered-by-global a:hover,
+.powered-by-login a:hover { text-decoration: underline; }
+.powered-by-login {
+  position: absolute; bottom: 12px; left: 0; right: 0;
+  color: rgba(255, 255, 255, 0.9);
+}
+.powered-by-login a { color: #fff; }
+body:has(#login-screen.active) .powered-by-global { display: none; }
+[data-theme="dark"] .powered-by-global {
+  background: color-mix(in srgb, var(--surface) 95%, transparent);
+}
+
 /* ============================================
    RECORD SCREEN
    ============================================ */
@@ -550,7 +581,7 @@ body {
 /* ============================================
    INSTALL PROMPT
    ============================================ */
-.install-prompt { position: fixed; bottom: 0; left: 0; right: 0; background: var(--surface); border-top: 2px solid var(--primary); padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; gap: 12px; z-index: 999; box-shadow: 0 -4px 12px rgba(0,0,0,0.1); }
+.install-prompt { position: fixed; bottom: 36px; left: 0; right: 0; background: var(--surface); border-top: 2px solid var(--primary); padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; gap: 12px; z-index: 999; box-shadow: 0 -4px 12px rgba(0,0,0,0.1); }
 .install-prompt span { font-weight: 600; color: var(--text); }
 .install-prompt button { padding: 10px 18px; font-size: 0.9rem; }
 
