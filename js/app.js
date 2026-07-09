@@ -125,19 +125,20 @@ const AquaApp = (() => {
     $('#footer-date').textContent = `${formatDateDisplay(formatDateISO(new Date()))} ${nowTime()}`;
   }
 
-  async function migratePoolsConfig() {
-    if (config.poolsMigratedV32) return false;
+  function migratePoolsConfig() {
+    const previousIds = (config.pools || []).map(p => p.id).join(',');
 
-    const allKnown = new Set([...ACTIVE_POOL_IDS, ...LEGACY_POOL_IDS]);
-    const manualPools = config.pools.filter(p => !allKnown.has(p.id));
-    const activeFromConfig = config.pools.filter(p => ACTIVE_POOL_IDS.has(p.id));
+    const manualPools = (config.pools || []).filter(p =>
+      p.enabledManually ||
+      (!ACTIVE_POOL_IDS.has(p.id) && !LEGACY_POOL_IDS.has(p.id))
+    );
 
     config.pools = [
-      ...DEFAULT_POOLS.map(dp => activeFromConfig.find(p => p.id === dp.id) || dp),
-      ...manualPools
+      ...DEFAULT_POOLS.map(dp => config.pools.find(p => p.id === dp.id) || dp),
+      ...manualPools.filter(p => !ACTIVE_POOL_IDS.has(p.id))
     ];
-    config.poolsMigratedV32 = true;
-    return true;
+
+    return previousIds !== config.pools.map(p => p.id).join(',');
   }
 
   function changeDate(days) {
@@ -973,11 +974,14 @@ const AquaApp = (() => {
     const poolNames = $('#setting-pools').value.split('\n').map(n => n.trim()).filter(Boolean);
     const existingPools = config.pools;
     config.pools = poolNames.map((name) => {
-      const existing = existingPools.find(p => p.name === name) || DEFAULT_POOLS.find(p => p.name === name);
+      const existing = existingPools.find(p => p.name === name)
+        || POOL_CATALOG.find(p => p.name === name);
+      const isDefaultActive = DEFAULT_POOLS.some(d => d.name === name);
       return {
         id: existing?.id || slugify(name),
         name,
-        emoji: existing?.emoji || '💧'
+        emoji: existing?.emoji || '💧',
+        enabledManually: !isDefaultActive
       };
     });
 

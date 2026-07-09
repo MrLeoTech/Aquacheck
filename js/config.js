@@ -9,6 +9,21 @@ const DEFAULT_POOLS = [
   { id: 'mini-compact', name: 'Mini Compact Slide', emoji: '🛝' }
 ];
 
+/** Catálogo completo — usado ao adicionar piscinas manualmente em Definições */
+const POOL_CATALOG = [
+  ...DEFAULT_POOLS,
+  { id: 'chapinheiro', name: 'Chapinheiro', emoji: '💧' },
+  { id: 'aquatube', name: 'Aquatube', emoji: '🌀' },
+  { id: 'bacia-media', name: 'Bacia Média', emoji: '🔵' },
+  { id: 'bacia-grande', name: 'Bacia Grande', emoji: '🔷' },
+  { id: 'foam', name: 'Foam', emoji: '🫧' },
+  { id: 'fast-mountain', name: 'Fast Mountain', emoji: '⛰️' },
+  { id: 'turbolance', name: 'Turbolance', emoji: '🚀' },
+  { id: 'cascata', name: 'Cascata', emoji: '🏔️' },
+  { id: 'escorrega-infantil', name: 'Escorrega Infantil', emoji: '🛝' },
+  { id: 'lotus-monster', name: 'Lotus Monster', emoji: '🐉' }
+];
+
 /** Piscinas removidas da lista ativa — usadas apenas na migração de configurações antigas */
 const LEGACY_POOL_IDS = new Set([
   'chapinheiro', 'aquatube', 'bacia-media', 'bacia-grande', 'foam',
