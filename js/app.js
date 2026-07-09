@@ -52,6 +52,14 @@ const AquaApp = (() => {
     delete config.requireSignature;
     migratePoolsConfig();
     await AquaStorage.saveConfig(config);
+
+    const prevVersion = localStorage.getItem('aqw_app_version');
+    localStorage.setItem('aqw_app_version', APP_VERSION);
+    if (prevVersion && prevVersion !== APP_VERSION) {
+      location.reload();
+      return;
+    }
+
     await refreshRecords();
     initTheme();
     setupInstallPrompt();
@@ -127,17 +135,7 @@ const AquaApp = (() => {
 
   function migratePoolsConfig() {
     const previousIds = (config.pools || []).map(p => p.id).join(',');
-
-    const manualPools = (config.pools || []).filter(p =>
-      p.enabledManually ||
-      (!ACTIVE_POOL_IDS.has(p.id) && !LEGACY_POOL_IDS.has(p.id))
-    );
-
-    config.pools = [
-      ...DEFAULT_POOLS.map(dp => config.pools.find(p => p.id === dp.id) || dp),
-      ...manualPools.filter(p => !ACTIVE_POOL_IDS.has(p.id))
-    ];
-
+    config.pools = getActivePoolsList(config.pools);
     return previousIds !== config.pools.map(p => p.id).join(',');
   }
 
@@ -973,7 +971,7 @@ const AquaApp = (() => {
 
     const poolNames = $('#setting-pools').value.split('\n').map(n => n.trim()).filter(Boolean);
     const existingPools = config.pools;
-    config.pools = poolNames.map((name) => {
+    config.pools = getActivePoolsList(poolNames.map((name) => {
       const existing = existingPools.find(p => p.name === name)
         || POOL_CATALOG.find(p => p.name === name);
       const isDefaultActive = DEFAULT_POOLS.some(d => d.name === name);
@@ -983,7 +981,7 @@ const AquaApp = (() => {
         emoji: existing?.emoji || '💧',
         enabledManually: !isDefaultActive
       };
-    });
+    }));
 
     config.times = $('#setting-times').value.split('\n').map(t => t.trim()).filter(t => /^\d{2}:\d{2}$/.test(t));
     if (config.times.length === 0) config.times = [...DEFAULT_TIMES];

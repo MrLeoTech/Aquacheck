@@ -1,7 +1,7 @@
 /**
- * AquaCheck v3.1 Service Worker
+ * AquaCheck v3.2 Service Worker
  */
-const CACHE_NAME = 'aquacheck-water-v3.1.2';
+const CACHE_NAME = 'aquacheck-water-v3.2.0';
 const STATIC_ASSETS = [
   './',
   './index.html',
@@ -28,6 +28,13 @@ const CDN_ASSETS = [
   'https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js'
 ];
 
+function isNetworkFirstAsset(url, request) {
+  return request.mode === 'navigate' ||
+    url.pathname.endsWith('.js') ||
+    url.pathname.endsWith('.css') ||
+    url.pathname.endsWith('.html');
+}
+
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME)
@@ -48,20 +55,26 @@ self.addEventListener('fetch', (event) => {
   const { request } = event;
   if (request.method !== 'GET') return;
 
-  event.respondWith(
-    caches.match(request).then(cached => {
-      const fetchPromise = fetch(request).then(response => {
-        if (response && response.status === 200) {
+  const url = new URL(request.url);
+
+  if (isNetworkFirstAsset(url, request)) {
+    event.respondWith(
+      fetch(request).then(response => {
+        if (response && response.status === 200 && url.origin === self.location.origin) {
           const clone = response.clone();
           caches.open(CACHE_NAME).then(cache => cache.put(request, clone));
         }
         return response;
-      }).catch(() => cached);
+      }).catch(() =>
+        caches.match(request).then(cached =>
+          cached || (request.mode === 'navigate' ? caches.match('./index.html') : undefined)
+        )
+      )
+    );
+    return;
+  }
 
-      if (request.mode === 'navigate') {
-        return fetchPromise.catch(() => caches.match('./index.html'));
-      }
-      return cached || fetchPromise;
-    })
+  event.respondWith(
+    caches.match(request).then(cached => cached || fetch(request))
   );
 });

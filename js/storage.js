@@ -120,13 +120,15 @@ const AquaStorage = (() => {
   async function getConfig() {
     const saved = await getMeta('config');
     const cfg = saved ? { ...DEFAULT_CONFIG, ...saved } : { ...DEFAULT_CONFIG };
-    if (saved?.pools) cfg.pools = saved.pools;
+    if (saved?.pools) cfg.pools = getActivePoolsList(saved.pools);
+    else cfg.pools = [...DEFAULT_POOLS];
     if (saved?.times) cfg.times = saved.times;
     return cfg;
   }
 
   async function saveConfig(config) {
-    return setMeta('config', config);
+    const toSave = { ...config, pools: getActivePoolsList(config.pools) };
+    return setMeta('config', toSave);
   }
 
   async function getUser() {

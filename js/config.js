@@ -32,6 +32,34 @@ const LEGACY_POOL_IDS = new Set([
 
 const ACTIVE_POOL_IDS = new Set(DEFAULT_POOLS.map(p => p.id));
 
+function normalizePoolEntry(pool) {
+  if (!pool?.name) return null;
+  const catalog = POOL_CATALOG.find(c =>
+    c.id === pool.id || c.name.toLowerCase() === pool.name.toLowerCase()
+  );
+  return {
+    ...(catalog || {
+      id: pool.id || slugify(pool.name),
+      name: pool.name,
+      emoji: pool.emoji || '💧'
+    }),
+    enabledManually: !!pool.enabledManually
+  };
+}
+
+/** Garante apenas as 5 piscinas ativas + piscinas adicionadas manualmente em Definições */
+function getActivePoolsList(savedPools) {
+  const normalized = (savedPools || []).map(normalizePoolEntry).filter(Boolean);
+  const extras = normalized.filter(p =>
+    !ACTIVE_POOL_IDS.has(p.id) &&
+    (p.enabledManually || !LEGACY_POOL_IDS.has(p.id))
+  );
+  return [
+    ...DEFAULT_POOLS.map(dp => normalized.find(p => p.id === dp.id) || dp),
+    ...extras
+  ];
+}
+
 /** Piscinas ligadas: valores de doseadora partilhados entre si */
 const LINKED_POOL_SYNC = {
   aquaspray: 'mini-compact',
@@ -76,4 +104,4 @@ const DEFAULT_CONFIG = {
   autoBackupDays: 7
 };
 
-const APP_VERSION = '3.1.0';
+const APP_VERSION = '3.2.0';
