@@ -104,4 +104,4 @@ const DEFAULT_CONFIG = {
   autoBackupDays: 7
 };
 
-const APP_VERSION = '3.2.0';
+const APP_VERSION = '3.2.1';

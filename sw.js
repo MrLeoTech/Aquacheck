@@ -1,7 +1,7 @@
 /**
  * AquaCheck v3.2 Service Worker
  */
-const CACHE_NAME = 'aquacheck-water-v3.2.0';
+const CACHE_NAME = 'aquacheck-water-v3.2.1';
 const STATIC_ASSETS = [
   './',
   './index.html',

@@ -288,8 +288,8 @@ const AquaApp = (() => {
     const prev = records.sort((a, b) => b.time.localeCompare(a.time))[0];
     const parts = [];
     ['ph', 'cloro_livre', 'temp_agua'].forEach(key => {
-      const cur = parseFloat(currentRecord.params[key]);
-      const old = parseFloat(prev.params[key]);
+      const cur = parseDecimal(currentRecord.params[key]);
+      const old = parseDecimal(prev.params[key]);
       if (!isNaN(cur) && !isNaN(old)) {
         const diff = (cur - old).toFixed(2);
         const sign = diff > 0 ? '+' : '';
@@ -358,16 +358,26 @@ const AquaApp = (() => {
     }
   }
 
-  function applyParamValue(key, value) {
-    currentRecord.params[key] = value;
-    const inp = $(`#param-${key}`);
-    if (inp) {
-      inp.value = value;
-      validateParam(key, value);
+  function applyParamValue(key, value, updateInput = true) {
+    const normalized = normalizeDecimalString(value);
+    currentRecord.params[key] = normalized;
+    if (updateInput) {
+      const inp = $(`#param-${key}`);
+      if (inp) inp.value = normalized;
     }
+    validateParam(key, normalized);
     if (key === 'cloro_livre' || key === 'cloro_total') calculateCombinedChlorine();
     showComparisonHint();
-    syncLinkedPoolFields(key, value);
+    syncLinkedPoolFields(key, normalized);
+    scheduleAutoSave();
+  }
+
+  function handleParamInput(key, rawValue) {
+    currentRecord.params[key] = rawValue;
+    validateParam(key, rawValue);
+    if (key === 'cloro_livre' || key === 'cloro_total') calculateCombinedChlorine();
+    showComparisonHint();
+    syncLinkedPoolFields(key, normalizeDecimalString(rawValue));
     scheduleAutoSave();
   }
 
@@ -397,21 +407,29 @@ const AquaApp = (() => {
             <span class="param-limits">${limits.min} – ${limits.max} ${p.unit}</span>
           </div>
           <div class="param-input-wrap">
-            <input type="number" id="param-${p.key}" data-key="${p.key}"
-              value="${value !== '' && value != null ? value : ''}" step="${p.step}"
-              ${p.readonly ? 'readonly' : ''} class="${alertCls}" placeholder="—"
-              inputmode="decimal">
+            <input type="text" id="param-${p.key}" data-key="${p.key}"
+              value="${value !== '' && value != null ? value : ''}"
+              ${p.readonly ? 'readonly' : ''} class="param-value ${alertCls}" placeholder="—"
+              inputmode="decimal" autocomplete="off" enterkeyhint="next">
             <span class="param-unit">${p.unit}</span>
           </div>
           <div class="param-alert-msg ${alertMsg ? 'visible' : ''}" id="alert-${p.key}">${alertMsg}</div>
         </div>`;
     }).join('');
 
-    $$('#params-form input[type="number"]').forEach(inp => {
+    $$('#params-form input.param-value').forEach(inp => {
       if (!inp.readOnly) {
         inp.oninput = debounce((e) => {
-          applyParamValue(e.target.dataset.key, e.target.value);
+          handleParamInput(e.target.dataset.key, e.target.value);
         }, 150);
+        inp.onblur = (e) => {
+          const key = e.target.dataset.key;
+          const normalized = normalizeDecimalString(e.target.value);
+          if (normalized !== e.target.value) e.target.value = normalized;
+          currentRecord.params[key] = normalized;
+          validateParam(key, normalized);
+          scheduleAutoSave();
+        };
       }
     });
 
@@ -424,8 +442,8 @@ const AquaApp = (() => {
   }
 
   function calculateCombinedChlorine() {
-    const livre = parseFloat(currentRecord.params.cloro_livre) || 0;
-    const total = parseFloat(currentRecord.params.cloro_total) || 0;
+    const livre = parseDecimal(currentRecord.params.cloro_livre) || 0;
+    const total = parseDecimal(currentRecord.params.cloro_total) || 0;
 
     if (livre > 0 && total > 0 && livre > total) {
       const msg = $('#alert-cloro_combinado');
@@ -452,7 +470,7 @@ const AquaApp = (() => {
     const p = PARAMETERS.find(x => x.key === key);
     if (!p || p.type === 'checkbox') return;
 
-    const num = parseFloat(value);
+    const num = parseDecimal(value);
     const row = $(`.param-row[data-key="${key}"]`);
     const inp = $(`#param-${key}`);
     const msg = $(`#alert-${key}`);
@@ -486,7 +504,7 @@ const AquaApp = (() => {
 
   function getParamAlertClass(p, value) {
     if (p.type === 'checkbox' || value === '') return '';
-    const num = parseFloat(value);
+    const num = parseDecimal(value);
     if (isNaN(num)) return '';
     const limits = getLimits(p);
     if (num < limits.min || num > limits.max) return 'alert';
@@ -497,7 +515,7 @@ const AquaApp = (() => {
 
   function getParamAlertMessage(p, value) {
     if (p.type === 'checkbox' || value === '') return '';
-    const num = parseFloat(value);
+    const num = parseDecimal(value);
     if (isNaN(num)) return '';
     const limits = getLimits(p);
     if (num < limits.min) {
@@ -520,14 +538,14 @@ const AquaApp = (() => {
     let hasAlerts = false;
     PARAMETERS.forEach(p => {
       if (p.type === 'number' && !p.readonly) {
-        const val = parseFloat(currentRecord.params[p.key]);
+        const val = parseDecimal(currentRecord.params[p.key]);
         if (!isNaN(val)) {
           const limits = getLimits(p);
           if (val < limits.min || val > limits.max) hasAlerts = true;
         }
       }
     });
-    const cc = parseFloat(currentRecord.params.cloro_combinado);
+    const cc = parseDecimal(currentRecord.params.cloro_combinado);
     if (!isNaN(cc) && cc > config.ccMax) hasAlerts = true;
     return hasAlerts;
   }
@@ -781,9 +799,9 @@ const AquaApp = (() => {
     const alertsCard = $('#dash-alerts-card');
     if (alertsCard) alertsCard.classList.toggle('alert', alerts.length > 0);
 
-    const phValues = completed.map(r => parseFloat(r.params.ph)).filter(v => !isNaN(v));
-    const clValues = completed.map(r => parseFloat(r.params.cloro_livre)).filter(v => !isNaN(v));
-    const tempValues = completed.map(r => parseFloat(r.params.temp_agua)).filter(v => !isNaN(v));
+    const phValues = completed.map(r => parseDecimal(r.params.ph)).filter(v => !isNaN(v));
+    const clValues = completed.map(r => parseDecimal(r.params.cloro_livre)).filter(v => !isNaN(v));
+    const tempValues = completed.map(r => parseDecimal(r.params.temp_agua)).filter(v => !isNaN(v));
 
     $('#dash-ph-avg').textContent = phValues.length ? (phValues.reduce((a, b) => a + b, 0) / phValues.length).toFixed(2) : '—';
     $('#dash-cl-avg').textContent = clValues.length ? (clValues.reduce((a, b) => a + b, 0) / clValues.length).toFixed(2) : '—';
@@ -961,11 +979,11 @@ const AquaApp = (() => {
   }
 
   async function saveSettings() {
-    config.phMin = parseFloat($('#setting-ph-min').value) || 7.20;
-    config.phMax = parseFloat($('#setting-ph-max').value) || 7.80;
-    config.clMin = parseFloat($('#setting-cl-min').value) || 0.50;
-    config.clMax = parseFloat($('#setting-cl-max').value) || 2.50;
-    config.ccMax = parseFloat($('#setting-cc-max').value) || 0.60;
+    config.phMin = parseDecimal($('#setting-ph-min').value) || 7.20;
+    config.phMax = parseDecimal($('#setting-ph-max').value) || 7.80;
+    config.clMin = parseDecimal($('#setting-cl-min').value) || 0.50;
+    config.clMax = parseDecimal($('#setting-cl-max').value) || 2.50;
+    config.ccMax = parseDecimal($('#setting-cc-max').value) || 0.60;
     config.pin = $('#setting-pin').value.trim();
     config.enableNotifications = $('#setting-notifications').checked;
 

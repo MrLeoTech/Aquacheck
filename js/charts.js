@@ -39,21 +39,21 @@ const AquaCharts = (() => {
         datasets: [
           {
             label: 'pH',
-            data: sorted.map(r => parseFloat(r.params.ph) || null),
+            data: sorted.map(r => parseDecimal(r.params.ph) || null),
             borderColor: '#0ea5e9',
             tension: 0.3,
             spanGaps: true
           },
           {
             label: 'Cloro Livre',
-            data: sorted.map(r => parseFloat(r.params.cloro_livre) || null),
+            data: sorted.map(r => parseDecimal(r.params.cloro_livre) || null),
             borderColor: '#22c55e',
             tension: 0.3,
             spanGaps: true
           },
           {
             label: 'Temp. °C',
-            data: sorted.map(r => parseFloat(r.params.temp_agua) || null),
+            data: sorted.map(r => parseDecimal(r.params.temp_agua) || null),
             borderColor: '#f59e0b',
             tension: 0.3,
             spanGaps: true,

@@ -97,6 +97,19 @@ function slugify(name) {
     .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'pool';
 }
 
+/** Aceita vírgula ou ponto como separador decimal (teclado PT) */
+function normalizeDecimalString(value) {
+  if (value === '' || value == null) return '';
+  return String(value).trim().replace(/\s/g, '').replace(',', '.');
+}
+
+function parseDecimal(value) {
+  const normalized = normalizeDecimalString(value);
+  if (normalized === '' || normalized === '.' || normalized === '-') return NaN;
+  const num = parseFloat(normalized);
+  return Number.isFinite(num) ? num : NaN;
+}
+
 function resizeImage(src, maxW, maxH, quality, callback) {
   const img = new Image();
   img.onload = () => {
