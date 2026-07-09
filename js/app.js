@@ -17,6 +17,7 @@ const AquaApp = (() => {
 
   let sigCanvas, sigCtx, sigDrawing = false;
   let sigBound = false;
+  let syncingLinkedPool = false;
 
   const screens = {
     login: $('#login-screen'),
@@ -49,6 +50,7 @@ const AquaApp = (() => {
     config = await AquaStorage.getConfig();
     delete config.requiredFields;
     delete config.requireSignature;
+    migratePoolsConfig();
     await AquaStorage.saveConfig(config);
     await refreshRecords();
     initTheme();
@@ -98,7 +100,6 @@ const AquaApp = (() => {
     updateDashboard();
     updateFooter();
     setupAppEvents();
-    bindSignatureOnce();
 
     if (config.enableNotifications) {
       AquaNotifications.requestPermission().then(() => {
@@ -121,8 +122,22 @@ const AquaApp = (() => {
   }
 
   function updateFooter() {
-    $('#footer-user').textContent = currentUser?.name || '—';
     $('#footer-date').textContent = `${formatDateDisplay(formatDateISO(new Date()))} ${nowTime()}`;
+  }
+
+  async function migratePoolsConfig() {
+    if (config.poolsMigratedV32) return false;
+
+    const allKnown = new Set([...ACTIVE_POOL_IDS, ...LEGACY_POOL_IDS]);
+    const manualPools = config.pools.filter(p => !allKnown.has(p.id));
+    const activeFromConfig = config.pools.filter(p => ACTIVE_POOL_IDS.has(p.id));
+
+    config.pools = [
+      ...DEFAULT_POOLS.map(dp => activeFromConfig.find(p => p.id === dp.id) || dp),
+      ...manualPools
+    ];
+    config.poolsMigratedV32 = true;
+    return true;
   }
 
   function changeDate(days) {
@@ -199,7 +214,6 @@ const AquaApp = (() => {
     renderParamsForm();
     loadObservations();
     renderPoolPhotos();
-    loadSignatureCanvas();
     showComparisonHint();
     showScreen(screens, 'record');
   }
@@ -260,7 +274,6 @@ const AquaApp = (() => {
       renderParamsForm();
       loadObservations();
       renderPoolPhotos();
-      loadSignatureCanvas();
       showComparisonHint();
     };
   }
@@ -294,6 +307,70 @@ const AquaApp = (() => {
   }
 
   // ─── PARAMS ───
+
+  async function syncLinkedPoolFields(key, value) {
+    const linkedId = LINKED_POOL_SYNC[currentPoolId];
+    if (!linkedId || !LINKED_SYNC_KEYS.includes(key) || syncingLinkedPool) return;
+
+    syncingLinkedPool = true;
+    try {
+      let linkedRecord = allRecords.find(r =>
+        r.poolId === linkedId && r.date === currentDateISO && r.time === currentTime
+      );
+
+      if (linkedRecord) {
+        linkedRecord = JSON.parse(JSON.stringify(linkedRecord));
+      } else {
+        linkedRecord = {
+          id: 'rec_' + Date.now() + '_sync',
+          poolId: linkedId,
+          poolName: config.pools.find(p => p.id === linkedId)?.name || linkedId,
+          employee: currentUser?.name || '',
+          date: currentDateISO,
+          time: currentTime,
+          timestamp: nowISO(),
+          completed: false,
+          params: {},
+          observations: '',
+          photos: [],
+          signature: null,
+          hasAlerts: false
+        };
+        PARAMETERS.forEach(p => {
+          if (p.type === 'checkbox') linkedRecord.params[p.key] = false;
+          else linkedRecord.params[p.key] = '';
+        });
+      }
+
+      linkedRecord.params[key] = value;
+      await AquaStorage.upsertRecord(linkedRecord);
+      await refreshRecords();
+
+      if (currentPoolId === linkedId && screens.record.classList.contains('active')) {
+        currentRecord.params[key] = value;
+        const inp = $(`#param-${key}`);
+        if (inp) {
+          inp.value = value;
+          validateParam(key, value);
+        }
+      }
+    } finally {
+      syncingLinkedPool = false;
+    }
+  }
+
+  function applyParamValue(key, value) {
+    currentRecord.params[key] = value;
+    const inp = $(`#param-${key}`);
+    if (inp) {
+      inp.value = value;
+      validateParam(key, value);
+    }
+    if (key === 'cloro_livre' || key === 'cloro_total') calculateCombinedChlorine();
+    showComparisonHint();
+    syncLinkedPoolFields(key, value);
+    scheduleAutoSave();
+  }
 
   function renderParamsForm() {
     const container = $('#params-form');
@@ -334,12 +411,7 @@ const AquaApp = (() => {
     $$('#params-form input[type="number"]').forEach(inp => {
       if (!inp.readOnly) {
         inp.oninput = debounce((e) => {
-          const key = e.target.dataset.key;
-          currentRecord.params[key] = e.target.value;
-          validateParam(key, e.target.value);
-          if (key === 'cloro_livre' || key === 'cloro_total') calculateCombinedChlorine();
-          showComparisonHint();
-          scheduleAutoSave();
+          applyParamValue(e.target.dataset.key, e.target.value);
         }, 150);
       }
     });
@@ -519,24 +591,20 @@ const AquaApp = (() => {
           let filled = 0;
 
           if (detected.ph) {
-            currentRecord.params.ph = detected.ph;
-            const inp = $('#param-ph');
-            if (inp) { inp.value = detected.ph; validateParam('ph', detected.ph); filled++; }
+            applyParamValue('ph_doseadora', detected.ph);
+            filled++;
           }
           if (detected.temp) {
-            currentRecord.params.temp_agua = detected.temp;
-            const inp = $('#param-temp_agua');
-            if (inp) { inp.value = detected.temp; validateParam('temp_agua', detected.temp); filled++; }
+            applyParamValue('temp_agua', detected.temp);
+            filled++;
           }
           if (detected.cloro) {
-            currentRecord.params.cloro_livre = detected.cloro;
-            const inp = $('#param-cloro_livre');
-            if (inp) { inp.value = detected.cloro; validateParam('cloro_livre', detected.cloro); calculateCombinedChlorine(); filled++; }
+            applyParamValue('cloro_livre_doseadora', detected.cloro);
+            filled++;
           }
 
           if (filled > 0) {
             showToast(`${filled} valor(es) detetado(s). Verifique e corrija se necessário.`, 'success');
-            scheduleAutoSave();
           } else {
             showToast('Não foi possível ler valores. Insira manualmente.', 'error');
           }
@@ -821,7 +889,6 @@ const AquaApp = (() => {
     renderParamsForm();
     loadObservations();
     renderPoolPhotos();
-    loadSignatureCanvas();
     showComparisonHint();
     showScreen(screens, 'record');
   }
@@ -1000,9 +1067,6 @@ const AquaApp = (() => {
       showScreen(screens, 'app');
       updateDashboard();
     };
-
-    $('#btn-clear-sig').onclick = clearSignature;
-    $('#btn-save-sig').onclick = saveSignature;
 
     $('#btn-save-record').onclick = async () => {
       await saveCurrentRecord(true);

@@ -6,18 +6,24 @@ const DEFAULT_POOLS = [
   { id: 'adultos', name: 'Adultos', emoji: '🏊' },
   { id: 'infantil', name: 'Infantil', emoji: '👶' },
   { id: 'aquaspray', name: 'Aquaspray', emoji: '💦' },
-  { id: 'mini-compact', name: 'Mini Compact Slide', emoji: '🛝' },
-  { id: 'chapinheiro', name: 'Chapinheiro', emoji: '💧' },
-  { id: 'aquatube', name: 'Aquatube', emoji: '🌀' },
-  { id: 'bacia-media', name: 'Bacia Média', emoji: '🔵' },
-  { id: 'bacia-grande', name: 'Bacia Grande', emoji: '🔷' },
-  { id: 'foam', name: 'Foam', emoji: '🫧' },
-  { id: 'fast-mountain', name: 'Fast Mountain', emoji: '⛰️' },
-  { id: 'turbolance', name: 'Turbolance', emoji: '🚀' },
-  { id: 'cascata', name: 'Cascata', emoji: '🏔️' },
-  { id: 'escorrega-infantil', name: 'Escorrega Infantil', emoji: '🛝' },
-  { id: 'lotus-monster', name: 'Lotus Monster', emoji: '🐉' }
+  { id: 'mini-compact', name: 'Mini Compact Slide', emoji: '🛝' }
 ];
+
+/** Piscinas removidas da lista ativa — usadas apenas na migração de configurações antigas */
+const LEGACY_POOL_IDS = new Set([
+  'chapinheiro', 'aquatube', 'bacia-media', 'bacia-grande', 'foam',
+  'fast-mountain', 'turbolance', 'cascata', 'escorrega-infantil', 'lotus-monster'
+]);
+
+const ACTIVE_POOL_IDS = new Set(DEFAULT_POOLS.map(p => p.id));
+
+/** Piscinas ligadas: valores de doseadora partilhados entre si */
+const LINKED_POOL_SYNC = {
+  aquaspray: 'mini-compact',
+  'mini-compact': 'aquaspray'
+};
+
+const LINKED_SYNC_KEYS = ['temp_agua', 'ph_doseadora', 'cloro_livre_doseadora'];
 
 const DEFAULT_TIMES = ['08:00', '13:00', '17:00'];
 

@@ -23,9 +23,9 @@ Aplicação PWA para controlo diário da qualidade da água das piscinas.
 - Backup JSON automático periódico
 - Ícones PWA incluídos
 
-## Piscinas (15)
+## Piscinas ativas (5)
 
-Ondas, Adultos, Infantil, Aquaspray, Mini Compact Slide, Chapinheiro, Aquatube, Bacia Média, Bacia Grande, Foam, Fast Mountain, Turbolance, Cascata, Escorrega Infantil, Lotus Monster
+Ondas, Adultos, Infantil, Aquaspray, Mini Compact Slide — mais piscinas podem ser adicionadas manualmente em Definições.
 
 ## Registos Diários
 
